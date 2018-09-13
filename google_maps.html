@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map_canvas { height: 100% }
+    </style>
+    <script type="text/javascript" src="qrc:/html/qwebchannel.js"></script>
+    <script type="text/javascript"
+      src="http://maps.googleapis.com/maps/api/js?key=AIzaSyDzZjRWrcakGUPgxLfphTatr_kxjqyE22g">
+    </script>
+
+    <script type="text/javascript">
+      var map;
+      var markers = new Map();
+
+      function output(message) {
+          var output = document.getElementById("output");
+        //  output.innerHTML = output.innerHTML + message + "\n";
+      }
+
+      function initialize() {
+        var myOptions = {
+          center: new google.maps.LatLng(52.53, 13.38),
+          zoom: 8,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          panControl: true
+        };
+        map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+ 
+
+        if (location.search != "")
+            var baseUrl = (/[?&]webChannelBaseUrl=([A-Za-z0-9\-:/\.]+)/.exec(location.search)[1]);
+        else
+            var baseUrl = "ws://localhost:12345";
+
+        output("Connecting to WebSocket server at " + baseUrl + ".");
+        var socket = new WebSocket(baseUrl);
+
+        socket.onclose = function() {
+            console.error("web channel closed");
+        };
+        socket.onerror = function(error) {
+            console.error("web channel error: " + error);
+        };
+        socket.onopen = function() {
+            output("WebSocket connected, setting up QWebChannel");
+            new QWebChannel(socket, function(channel) {
+                window.listener = channel.objects.listener;
+            });
+        }
+      }
+
+      //Set a marker with the given coordinates on the map. Every marker is associated with a certain image file
+      function addMarker(lat, lng, fileName)
+      {
+        var marker = new google.maps.Marker({position: new google.maps.LatLng(lat, lng),map: map,});
+        marker.addListener('click', function() {
+            window.listener.onMarkerClicked(fileName);
+          });
+
+        if(markers.has(fileName))
+        {
+            //to remove we need to set the Map (google.maps.Map) to null
+            markers.get(fileName).setMap(null);
+        }
+        markers.set(fileName, marker);
+      }
+
+      function removeAllMarkers()
+      {
+          markers.forEach(function(value, key, map) {value.setMap(null);});
+          markers = new Map();
+      }
+
+      function goTo(lat, lng)
+      {
+        var newLoc = new google.maps.LatLng(lat, lng);
+        map.setCenter(newLoc);
+      }
+
+      // Get the geo location at the given mouse position and pass it back to
+      //the C++ code. Filename is the image that will be tagged with the acquired geolocation
+      function getLocationAtMousePosition(x, y, fileName)
+      {
+        var pixel =new google.maps.Point(x,y);
+
+        var scale = Math.pow(2, map.getZoom());
+        var proj = map.getProjection();
+        var bounds = map.getBounds();
+
+        var nw = proj.fromLatLngToPoint(
+          new google.maps.LatLng(
+            bounds.getNorthEast().lat(),
+            bounds.getSouthWest().lng()
+          ));
+
+        var point = new google.maps.Point();
+        point.x = pixel.x / scale + nw.x;
+        point.y = pixel.y / scale + nw.y;
+
+        var location = proj.fromPointToLatLng(point);
+        window.listener.onLocationAcquired(location.lat(), location.lng(), fileName);
+      }
+
+    </script>
+  </head>
+  <body onload="initialize()">
+    <div id="map_canvas" style="width:100%; height:100%"></div>
+  </body>
+</html>

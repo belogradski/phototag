@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/html">
+        <file>google_maps.html</file>
+        <file>qwebchannel.js</file>
+    </qresource>
+    <qresource prefix="/img">
+        <file>tag.png</file>
+    </qresource>
+</RCC>
