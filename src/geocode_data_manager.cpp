@@ -14,7 +14,7 @@ GeocodeDataManager::GeocodeDataManager(QObject *parent) :
 
 void GeocodeDataManager::getCoordinates(const QString& address)
 {
-    QString url = QString("https://maps.google.com/maps/api/geocode/json?address=%1&sensor=false&language=en&key=AIzaSyDzZjRWrcakGUPgxLfphTatr_kxjqyE22g").arg(address);
+    QString url = QString("https://maps.google.com/maps/api/geocode/json?address=%1&sensor=false&language=en&key=YOUR_API_KEY").arg(address);
     m_pNetworkAccessManager->get(QNetworkRequest(QUrl(url)));
 }
 
