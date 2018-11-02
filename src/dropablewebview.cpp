@@ -9,9 +9,13 @@
 #include <QMimeData>
 #include <QWebChannel>
 #include <QWebSocketServer>
+#include <QCoreApplication>
+#include <QThread>
+#include <QMessageBox>
 
 DropableWebView::DropableWebView(QWidget *parent)
     : QWebEngineView(parent)
+    , mRequestId(0)
 {
     setAcceptDrops(true);
 
@@ -44,19 +48,33 @@ void DropableWebView::dragEnterEvent(QDragEnterEvent *event)
 void DropableWebView::dropEvent(QDropEvent *event)
 {
     QWebEngineView::dropEvent(event);
-
+    //get the coordinates of the click position from the map (via the java script)
+    //ad assign these coordinates to the dropped files
     auto fileNames = event->mimeData()->text().split("|");
-    for(auto file : fileNames)
-    {
-        qDebug() << file;
-        QString str = QStringLiteral("getLocationAtMousePosition(%1,%2,\"%3\");").arg(event->posF().x()).arg(event->posF().y()).arg(file);
-        page()->runJavaScript(str);
-    }
+    mEventListener->scheduleFiles(++mRequestId, fileNames);
+    QString str = QStringLiteral("getLocationAtMousePosition(%1,%2,\"%3\");").arg(event->posF().x()).arg(event->posF().y()).arg(mRequestId);
+    page()->runJavaScript(str);
 }
 
 void DropableWebView::dragMoveEvent(QDragMoveEvent * event)
 {
     event->acceptProposedAction();
+}
+
+void DropableWebView::waitForFinished()
+{
+    if(!mEventListener->isFinished())
+    {
+        QMessageBox box(this);
+        box.setText("Please wait.\nSome fotos are still being tagged in the bakground.");//, QMessageBox::NoButton);
+        box.setStandardButtons(QMessageBox::NoButton);
+        box.show();
+        while(!mEventListener->isFinished())
+        {
+            QThread::msleep(100);
+            qApp->processEvents();
+        }
+    }
 }
 
 void DropableWebView::goToCoordinates(double lat, double lng)

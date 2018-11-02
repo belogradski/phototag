@@ -18,8 +18,11 @@ public:
     void goToCoordinates(double north, double east);
     void removeAllMarkers();
 
+    /// blocks untill all files that were dropped on this widget are tagged
+    /// if tagging is stil not finished in the background a message box is shown
+    void waitForFinished();
 signals:
-    void fileChanged(const QString& filePath);
+    void fileChanged(const QString& filePath, double lat, double lng);
     void imageClickedOnMap(const QString& filePath);
 
 protected:
@@ -32,6 +35,7 @@ private:
     QWebChannel* mWebChannel;
     QWebSocketServer* mSocketServer;
     WebSocketClientWrapper* mClientWrapper;
+    uint mRequestId;
 };
 
 #endif // QDROPABLEWEBVIEW_H

@@ -5,6 +5,7 @@
 #include <QPainter>
 #include <exifwrapper.h>
 #include <QBuffer>
+#include <QDebug>
 
 #define IMAGE_SIZE 128
 #define TOOLTIP_SIZE 512
@@ -36,6 +37,10 @@ public:
         start();
     }
 
+    void cancel()
+    {
+        mCanceled = true;
+    }
 protected:
     void run() override
     {
@@ -52,20 +57,31 @@ private:
     QString mPath;
     bool mCanceled;
     std::vector<QString> mFiles;
-
-    void cancel()
-    {
-        mCanceled = true;
-    }
 };
 
-
+namespace
+{
+    void drawMarker(QPixmap* pm)
+    {
+        const static QPixmap tag = QPixmap(":/img/tag.png").scaled(32,32);
+        QPainter painter(pm);
+        painter.drawPixmap(tag.rect(), tag);
+    }
+}
 
 ImageListModel::ImageListModel()
 {
     for(int i=0; i<QThread::idealThreadCount(); i++)
         mWorkerThreads.push_back(std::make_unique<WorkerThread>(new WorkerThread(this)));
     mModelMutex = new QMutex(QMutex::Recursive);
+}
+
+ImageListModel::~ImageListModel()
+{
+    for(auto& thread : mWorkerThreads)
+        thread->cancel();
+    for(auto& thread : mWorkerThreads)
+        thread->wait();
 }
 
 void ImageListModel::resetModel()
@@ -100,29 +116,31 @@ ImageListModel::ModelItem ImageListModel::readFile(const QString &filePath) cons
     {
         item.highresImage = pm.scaled(QSize(TOOLTIP_SIZE, TOOLTIP_SIZE), Qt::KeepAspectRatio);
         pm = pm.scaled(QSize(IMAGE_SIZE, IMAGE_SIZE), Qt::KeepAspectRatio);
-        const static QPixmap tag = QPixmap(":/img/tag.png").scaled(32,32);
         item.hasGeoTag = ExifWrapper::hasGeoTags(filePath, &item.lat, &item.lng);
         if(item.hasGeoTag)
         {
-            QPainter painter(&pm);
-            painter.drawPixmap(tag.rect(), tag);
-            item.hasGeoTag = true;
+            drawMarker(&pm);
         }
         item.image = pm;
     }
     return item;
 }
 
-void ImageListModel::onFileChanged(const QString &filePath)
+void ImageListModel::onFileChanged(const QString &filePath, double lat, double lng)
 {
     for(int row = 0; row<rowCount(); row++)
     {
         auto fName = data(index(row, 0), Qt::DisplayRole).toString();
         if(filePath == fName)
         {
-            auto item = readFile(filePath);
-            if(!item.image.isNull())
-                mImages[row] = item;
+            auto& item = mImages[row];
+            item.lat = lat;
+            item.lng = lng;
+            if(!item.hasGeoTag)
+            {
+                item.hasGeoTag = true;
+                drawMarker(&item.image);
+            }
 
             emit dataChanged(index(row, 0),index(row, 0));
         }
@@ -203,8 +221,6 @@ QVariant ImageListModel::data(const QModelIndex &index, int role) const
             if(index.row()<mImages.size())
             {
                 QPixmap pm = mImages.at(index.row()).highresImage;
-//                QPixmap pm(mImages.at(index.row()).filePath);
-  //              pm = pm.scaled(QSize(TOOLTIP_SIZE, TOOLTIP_SIZE), Qt::KeepAspectRatio);
                 QByteArray data;
                 QBuffer buffer(&data);
                 pm.save(&buffer, "PNG", 100);

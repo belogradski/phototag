@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QTimer>
+#include <QCloseEvent>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -72,6 +73,7 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
+    delete mModel;
 }
 
 void MainWindow::goClicked()
@@ -133,4 +135,10 @@ void MainWindow::onImageAdded(const QModelIndex &parent, int first, int last)
     {
         showTagForItem(mModel->index(row), false, true);
     }
+}
+
+void MainWindow::closeEvent(QCloseEvent *ev)
+{
+    ui->webView->waitForFinished();
+    ev->accept();
 }

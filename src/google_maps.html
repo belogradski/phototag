@@ -83,7 +83,7 @@
 
       // Get the geo location at the given mouse position and pass it back to
       //the C++ code. Filename is the image that will be tagged with the acquired geolocation
-      function getLocationAtMousePosition(x, y, fileName)
+      function getLocationAtMousePosition(x, y, requestId)
       {
         var pixel =new google.maps.Point(x,y);
 
@@ -102,7 +102,7 @@
         point.y = pixel.y / scale + nw.y;
 
         var location = proj.fromPointToLatLng(point);
-        window.listener.onLocationAcquired(location.lat(), location.lng(), fileName);
+        window.listener.onLocationAcquired(location.lat(), location.lng(), requestId);
       }
 
     </script>

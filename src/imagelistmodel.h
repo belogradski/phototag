@@ -12,6 +12,8 @@ class ImageListModel : public QAbstractListModel
     friend class WorkerThread;
 public:
     ImageListModel();
+    ~ImageListModel();
+
     enum CustomRoles
     {
         LatitudeRole  = Qt::UserRole + 1,
@@ -26,7 +28,7 @@ public:
     QStringList mimeTypes() const override;
     QMimeData* mimeData(const QModelIndexList & indexes) const override;
 
-    void onFileChanged(const QString &filePath);
+    void onFileChanged(const QString &filePath, double lat, double lng);
 
 private:
     struct ModelItem

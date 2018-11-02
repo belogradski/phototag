@@ -54,6 +54,12 @@ int setGeoTags(double lat, double lng, const QString &fileName)
                          ,QString("-GPSLongitudeRef=%1").arg(lng >= 0 ?"E":"W")
                        ,fileName};
 
-    return QProcess::execute(EXIF_APP, args);
+    int res = QProcess::execute(EXIF_APP, args);
+    if(res == 0)
+    {
+        QString backup = fileName+"_original";
+        QFile(backup).remove();
+    }
+    return res;
 }
 }

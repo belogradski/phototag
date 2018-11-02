@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network widgets webenginewidgets webchannel websockets
+QT       += core gui network widgets webenginewidgets webchannel websockets concurrent
 
 TARGET = phototag
 TEMPLATE = app
